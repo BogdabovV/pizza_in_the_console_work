@@ -1,0 +1,175 @@
+def print_receipt(order, prices, cash):
+    print("\n" + "=" * 40)
+    print(f"{'Чек из пиццерии Чикен Белл':^40}")
+    print("=" * 40)
+    if not order:
+        print("Вы не выбрали ни одного блюда.")
+    else:
+        print(f"{'Позиция':<25}{'Кол-во':>5}{'Цена (руб.)':>10}")
+        print("-" * 40)
+        counts = {}
+        for item in order:
+            counts[item] = counts.get(item, 0) + 1
+        total = 0
+        for item, count in counts.items():
+            item_total = prices[item] * count
+            total += item_total
+            print(f"{item:<25}{count:>5}{item_total:>10}")
+        print("-" * 40)
+        print(f"{'Итого:':<30}{total:>10}")
+        if cash is not None:
+            print(f"{'Оплачено:':<30}{cash:>10}")
+            print(f"{'Сдача:':<30}{cash - total:>10}")
+    print("=" * 40)
+
+def get_user_data():
+    print("Добро пожаловать в пиццерию Чикен Белл!")
+    while True:
+        name = input("Введите ваше имя (только буквы): ").strip()
+        if name.isalpha():
+            name = name.capitalize()
+            break
+        print("Ошибка: имя должно содержать только буквы.")
+    while True:
+        try:
+            age = int(input("Введите возраст (6-90): "))
+            if 6 <= age <= 90:
+                break
+            else:
+                print("Ошибка: возраст должен быть от 6 до 90.")
+        except ValueError:
+            print("Ошибка: введите число.")
+    print(f"\nЗдравствуйте, {name}! Приятного выбора, мы рады вас видеть!")
+    return name, age
+
+def show_menu(age):
+    base_pizzas = {
+        "Маргарита": 300,
+        "Пепперони": 450,
+        "Гавайская": 400
+    }
+    multiplier = 1.5 if age >= 18 else 1
+    pizzas = {k: int(v * multiplier) for k, v in base_pizzas.items()}
+    drinks = {
+        "Кока-Кола": 100,
+        "Сок": 80,
+        "Вода": 50
+    }
+    print("\nМеню пицц:")
+    for i, (pizza, price) in enumerate(pizzas.items(), 1):
+        print(f"{i}. {pizza} - {price} руб.")
+    print("4. Кастомная пицца")
+    print("0. Закончить выбор пицц")
+    print("\nМеню напитков:")
+    for i, (drink, price) in enumerate(drinks.items(), 1):
+        print(f"{i}. {drink} - {price} руб.")
+    print("0. Закончить выбор напитков")
+    return pizzas, drinks
+
+def custom_pizza(age):
+    toppings = {
+        "Помидоры": 50,
+        "Грибы": 70,
+        "Ветчина": 80,
+        "Ананас": 60,
+        "Оливки": 55,
+        "Перец": 60,
+        "Лук": 40,
+        "Бекон": 100
+    }
+    multiplier = 1.5 if age >= 18 else 1
+    print("\nВыберите начинки для кастомной пиццы (через запятую), или 0 чтобы отказаться:")
+    for i, (topping, price) in enumerate(toppings.items(), 1):
+        print(f"{i}. {topping} - {int(price * multiplier)} руб.")
+    choice = input("Введите номера начинок: ").split(",")
+    if choice == ['0'] or choice == ['']:
+        return [], 0
+    selected = []
+    total_price = 0
+    for c in choice:
+        c = c.strip()
+        if c.isdigit() and 1 <= int(c) <= len(toppings):
+            name = list(toppings.keys())[int(c) - 1]
+            price = int(toppings[name] * multiplier)
+            selected.append((f"Кастомная пицца с {name}", price))
+            total_price += price
+    if selected:
+        print("Вы выбрали:", ", ".join(item[0] for item in selected))
+    else:
+        print("Начинки не выбраны.")
+    return selected, total_price
+
+def make_order(age, pizzas, drinks):
+    order = []
+    prices = {}
+    total = 0
+    while True:
+        choice = input("\nВыберите номер пиццы (1-4), или 0 чтобы закончить выбор: ")
+        if choice == '0':
+            break
+        elif choice in ['1', '2', '3']:
+            pizza = list(pizzas.keys())[int(choice) - 1]
+            price = pizzas[pizza]
+            order.append(pizza)
+            prices[pizza] = price
+            total += price
+            print(f"Добавлено: {pizza} - {price} руб.")
+        elif choice == '4':
+            selected, price = custom_pizza(age)
+            if selected:
+                for item, p in selected:
+                    order.append(item)
+                    prices[item] = p
+                total += price
+                print(f"Добавлена кастомная пицца на сумму {price} руб.")
+            else:
+                print("Кастомная пицца не добавлена.")
+        else:
+            print("Неверный ввод. Попробуйте снова.")
+    while True:
+        choice = input("\nВыберите номер напитка (1-3), или 0 чтобы закончить выбор напитков: ")
+        if choice == '0':
+            break
+        elif choice.isdigit() and 1 <= int(choice) <= len(drinks):
+            drink = list(drinks.keys())[int(choice) - 1]
+            price = drinks[drink]
+            order.append(drink)
+            prices[drink] = price
+            total += price
+            print(f"Добавлено: {drink} - {price} руб.")
+        else:
+            print("Неверный ввод. Попробуйте снова.")
+
+    print(f"\nИтого к оплате: {total} руб.")
+    cash = None
+    while True:
+        method = input("Выберите способ оплаты: 1 - Картой, 2 - Наличными: ")
+        if method == '1':
+            cash = total
+            print("Оплата картой принята.")
+            break
+        elif method == '2':
+            while True:
+                try:
+                    cash_input = int(input("Введите сумму оплаты: "))
+                    if cash_input < total:
+                        print("Сумма меньше итога, попробуйте снова.")
+                    else:
+                        cash = cash_input
+                        change = cash - total
+                        print(f"Оплата принята. Ваша сдача: {change} руб.")
+                        break
+                except ValueError:
+                    print("Введите корректное число.")
+            break
+        else:
+            print("Неверный выбор, попробуйте снова.")
+
+    print_receipt(order, prices, cash)
+
+def main():
+    name, age = get_user_data()
+    pizzas, drinks = show_menu(age)
+    make_order(age, pizzas, drinks)
+
+main()
