@@ -1,0 +1,298 @@
+import re
+import asyncio
+from datetime import datetime
+from aioconsole import ainput
+
+
+def check_date(date_str):
+    if not re.fullmatch(r"\d{2}\.\d{2}\.\d{4}", date_str):
+        return False
+    try:
+        dt = datetime.strptime(date_str, "%d.%m.%Y")
+        return dt <= datetime.now()
+    except ValueError:
+        return False
+
+
+def check_email(email):
+    pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    return bool(re.fullmatch(pattern, email))
+
+
+def check_integer(number_str):
+    return bool(re.fullmatch(r"[-+]?\d+", number_str))
+
+
+def check_number(number):
+    prefixes = ["+7", "+888"]
+    number_digits = re.sub(r"\D", "", number)
+    for prefix in prefixes:
+        prefix_digits = prefix.replace("+", "")
+        if number.startswith(prefix) or number_digits.startswith(prefix_digits):
+            rest = number_digits[len(prefix_digits):]
+            return rest.isdigit() and 9 <= len(rest) <= 10
+    return False
+
+
+def format_number(number):
+    number_digits = re.sub(r"\D", "", number)
+    if number.startswith("+7") or number_digits.startswith("7"):
+        digits = number_digits[-10:]
+        return f"+7 {digits[0:3]} {digits[3:6]} {digits[6:8]} {digits[8:]}"
+    elif number.startswith("+888") or number_digits.startswith("888"):
+        digits = number_digits[-10:]
+        return f"+888 {digits[0:3]} {digits[3:6]} {digits[6:8]} {digits[8:]}"
+    else:
+        return number
+
+
+async def input_phone_number():
+    while True:
+        number = await ainput("Введите номер телефона (+7 или +888), можно с пробелами, дефисами и скобками: ")
+        if check_number(number):
+            formatted = format_number(number)
+            print("Номер принят:", formatted)
+            return formatted
+        else:
+            print("Ошибка: неверный формат номера. Попробуйте ещё раз.")
+
+
+def print_receipt(order, prices, cash):
+    print("\n" + "=" * 40)
+    print(f"{'Чек из пиццерии Чикен Белл':^40}")
+    print("=" * 40)
+    if not order:
+        print("Вы не выбрали ни одного блюда.")
+    else:
+        print(f"{'Позиция':<25}{'Кол-во':>5}{'Цена (руб.)':>10}")
+        print("-" * 40)
+        counts = {}
+        for item in order:
+            counts[item] = counts.get(item, 0) + 1
+        total = 0
+        for item, count in counts.items():
+            item_total = prices[item] * count
+            total += item_total
+            print(f"{item:<25}{count:>5}{item_total:>10}")
+        print("-" * 40)
+        print(f"{'Итого:':<30}{total:>10}")
+        if cash is not None:
+            print(f"{'Оплачено:':<30}{cash:>10}")
+            print(f"{'Сдача:':<30}{cash - total:>10}")
+    print("=" * 40)
+
+
+def save_order_to_file(name, age, email, order, prices):
+    with open("orders.txt", "a", encoding="utf-8") as f:
+        f.write(f"Имя: {name}, Возраст: {age}, Email: {email}\n")
+        counts = {}
+        for item in order:
+            counts[item] = counts.get(item, 0) + 1
+        for item, count in counts.items():
+            total_price = prices[item] * count
+            f.write(f"{item} x{count} = {total_price} руб.\n")
+        f.write("\n")
+
+
+async def get_user_data():
+    print("Добро пожаловать в пиццерию Чикен Белл!")
+    while True:
+        name = await ainput("Введите ваше имя (только буквы): ")
+        name = name.strip()
+        if name.isalpha():
+            name = name.capitalize()
+            break
+        print("Ошибка: имя должно содержать только буквы.")
+    while True:
+        date_birth = await ainput("Введите дату рождения в формате ДД.ММ.ГГГГ: ")
+        date_birth = date_birth.strip()
+        if check_date(date_birth):
+            break
+        print("Ошибка: неверный формат даты или дата в будущем.")
+    while True:
+        email = await ainput("Введите вашу почту (например user@gmail.com): ")
+        email = email.strip()
+        if check_email(email):
+            break
+        print("Ошибка: неверный формат почты.")
+    phone_number = await input_phone_number()
+    birth_year = int(date_birth.split('.')[-1])
+    current_year = datetime.now().year
+    age = current_year - birth_year
+    print(f"\nЗдравствуйте, {name}! Приятного выбора, мы рады вас видеть!")
+    print(f"Ваш номер телефона: {phone_number}")
+    print(f"Ваш email: {email}")
+    print(f"Вам {age} лет.")
+    return name, age, email
+
+
+def show_menu(age):
+    base_pizzas = {
+        "Маргарита": 300,
+        "Гавайская": 400,
+        "Четыре сыра": 500,
+        "Вегетарианская": 420,
+        "Барбекю": 480,
+        "Мексиканская": 460
+    }
+    multiplier = 1.5 if age >= 18 else 1
+    pizzas = {k: int(v * multiplier) for k, v in base_pizzas.items()}
+    drinks = {
+        "Кока-Кола": 100,
+        "Сок": 80,
+        "Вода": 50
+    }
+    print("\nМеню пицц:")
+    for i, (pizza, price) in enumerate(pizzas.items(), 1):
+        print(f"{i}. {pizza} - {price} руб.")
+    print("8. Кастомная пицца")
+    print("0. Закончить выбор пицц (или кастомных)")
+    print("\nМеню напитков:")
+    for i, (drink, price) in enumerate(drinks.items(), 1):
+        print(f"{i}. {drink} - {price} руб.")
+    print("0. Закончить выбор напитков")
+    return pizzas, drinks
+
+
+async def get_quantity(prompt="Введите количество штук: "):
+    while True:
+        qty_str = await ainput(prompt)
+        qty_str = qty_str.strip()
+        if qty_str.isdigit() and int(qty_str) > 0:
+            return int(qty_str)
+        else:
+            print("Введите корректное положительное число.")
+
+
+async def custom_pizza(age):
+    toppings = {
+        "1": ("Помидоры", 50),
+        "2": ("Грибы", 70),
+        "3": ("Ветчина", 80),
+        "4": ("Ананас", 60),
+        "5": ("Оливки", 55),
+        "6": ("Перец", 60),
+        "7": ("Лук", 40),
+        "8": ("Бекон", 100),
+        "9": ("Сыр моцарелла", 90),
+        "10": ("Курица", 85)
+    }
+    multiplier = 1.5 if age >= 18 else 1
+
+    print("\nВыберите ингредиенты для кастомной пиццы, перечислите номера через запятую:")
+    for num, (name, price) in toppings.items():
+        adjusted_price = int(price * multiplier)
+        print(f"{num}. {name} - {adjusted_price} руб.")
+
+    while True:
+        choice_str = await ainput("Введите номера ингредиентов (например 1,3,7), или 0 чтобы не добавлять: ")
+        choice_str = choice_str.strip()
+        if choice_str == "0" or choice_str == "":
+            print("Начинки не выбраны.")
+            return None, 0, 0
+        selected_nums = set(n.strip() for n in choice_str.split(","))
+        if all(num in toppings for num in selected_nums):
+            break
+        print("Ошибка: введите корректные номера ингредиентов из списка.")
+
+    selected_toppings = {toppings[num][0]: 1 for num in selected_nums}
+    total_price = sum(int(toppings[num][1] * multiplier) for num in selected_nums)
+    print(f"Вы выбрали начинки: {', '.join(selected_toppings.keys())}")
+    print(f"Общая цена начинки: {total_price} руб.")
+
+    qty_pizza = await get_quantity("Введите количество таких кастомных пицц: ")
+    return ("Кастомная пицца с " + ", ".join(selected_toppings.keys()), total_price, qty_pizza)
+
+
+async def make_order(name, age, email, pizzas, drinks):
+    order = []
+    prices = {}
+
+    while True:
+        print("\nВыберите номер пиццы (1-8), или 0 чтобы закончить выбор:")
+        choice = await ainput()
+        choice = choice.strip()
+
+        if choice == '0':
+            break
+
+        if choice == '8':
+            custom_desc, custom_price, custom_qty = await custom_pizza(age)
+            if custom_desc:
+                for _ in range(custom_qty):
+                    order.append(custom_desc)
+                    prices[custom_desc] = custom_price
+                print(f"Добавлена кастомная пицца ({custom_desc}) x{custom_qty} на сумму {custom_price * custom_qty} руб.")
+        elif choice in map(str, range(1, 8)):
+            pizza = list(pizzas.keys())[int(choice) - 1]
+            price = pizzas[pizza]
+
+            qty = await get_quantity(f"Сколько штук {pizza} хотите заказать? ")
+            for _ in range(qty):
+                order.append(pizza)
+                prices[pizza] = price
+            print(f"Добавлено: {pizza} x{qty} - {price * qty} руб.")
+        else:
+            print("Неверный ввод. Попробуйте снова.")
+
+    while True:
+        choice = await ainput("Выберите номер напитка (1-3), или 0 чтобы закончить выбор напитков: ")
+        choice = choice.strip()
+        if choice == '0':
+            break
+        if choice.isdigit() and 1 <= int(choice) <= len(drinks):
+            drink = list(drinks.keys())[int(choice) - 1]
+            price = drinks[drink]
+
+            qty = await get_quantity(f"Сколько штук {drink} хотите заказать? ")
+            for _ in range(qty):
+                order.append(drink)
+                prices[drink] = price
+            print(f"Добавлено: {drink} x{qty} - {price * qty} руб.")
+        else:
+            print("Неверный ввод. Попробуйте снова.")
+
+    total = sum(prices[item] for item in order)
+    print(f"\nИтого к оплате: {total} руб.")
+
+    cash = None
+    while True:
+        method = await ainput("Выберите способ оплаты: 1 - Картой, 2 - Наличными: ")
+        method = method.strip()
+        if method == '1':
+            cash = total
+            print("Оплата картой принята.")
+            break
+        elif method == '2':
+            while True:
+                cash_input = await ainput("Введите сумму оплаты: ")
+                cash_input = cash_input.strip()
+                if check_integer(cash_input):
+                    cash_input = int(cash_input)
+                    if cash_input < total:
+                        print("Сумма меньше итога, попробуйте снова.")
+                    else:
+                        cash = cash_input
+                        change = cash - total
+                        print(f"Оплата принята. Ваша сдача: {change} руб.")
+                        break
+                else:
+                    print("Ошибка: введите целое число.")
+            break
+        else:
+            print("Неверный выбор, попробуйте снова.")
+
+
+    print_receipt(order, prices, cash)
+    save_order_to_file(name, age, email, order, prices)
+
+
+async def main():
+    name, age, email = await get_user_data()
+    pizzas, drinks = show_menu(age)
+    await make_order(name, age, email, pizzas, drinks)
+
+
+if __name__ == "__main__":
+
+    asyncio.run(main())
