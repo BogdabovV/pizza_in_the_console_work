@@ -1,9 +1,5 @@
 # 🍕 Пиццерия "Чикен Белл" — Асинхронная консольная POS-система
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
-[![Asyncio](https://img.shields.io/badge/asyncio-yes-green)](https://docs.python.org/3/library/asyncio.html)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 **Полнофункциональная консольная пиццерия на Python с асинхронным вводом, двойной базой данных (память + файл) и валидацией данных.**
 
 ## ✨ **Возможности**
