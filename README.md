@@ -56,3 +56,5 @@ make_order() → print_receipt() → orders.txt
 Выбор: Маргарита x2 + Кола x1
 
 Итог: 1000₽ → Оплата 1500₽ → Сдача 500₽
+
+Презентация : https://docs.google.com/presentation/d/1xM6v1RQrGZd798_oqTo4vMXC5DA4iM2_BeZVqP_5C0U/edit?slide=id.gcb9a0b074_1_213#slide=id.gcb9a0b074_1_213
